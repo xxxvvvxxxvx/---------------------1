@@ -1,46 +1,89 @@
+import PySimpleGUI as sg
 import random
+import sqlite3
+
+def pret_izveele():
+  defizveeles = ['A','S','P']
+  pretIzveele = random.choice(defizveeles)
+  if pretIzveele == 'P':
+    window['-IZVELE-'].update("Papīrs")
+  if pretIzveele == 'S':
+    window['-IZVELE-'].update("Šķēres")
+  if pretIzveele == 'A':
+    window['-IZVELE-'].update("Akmens")
+  return pretIzveele
+
+def rezultats(pretIzveele,izveele):
+  if pretIzveele == str.upper(izveele):
+    rezultats = "Neizšķirts!"
+  elif pretIzveele == "A" and izveele.upper() == "S":
+    rezultats = "Tu zaudēji"
+  elif pretIzveele == "S" and izveele.upper() == "P":
+    rezultats = "Tu zaudēji"
+  elif pretIzveele == "P" and izveele.upper() == "A":
+    rezultats = "Tu zaudēji"
+  else:
+    rezultats = "Tu uzvarēji"
+  return rezultats
+
+def datu_saglabasana(vards,vecums):
+  db = sqlite3.connect('dati.db')
+  db.execute(
+  """
+  CREATE TABLE IF NOT EXISTS rezultati
+  (id   INTEGER   PRIMARY KEY AUTOINCREMENT   NOT NULL,
+  vards   TEXT,
+  vecums   INTEGER
+  )
+  """
+  )
+  db.execute("""
+           INSERT INTO rezultati
+           (vards,vecums)
+           VALUES(:vards,:vecums)
+           """,{'vards':vards,'vecums':vecums})
+
+  db.commit()
+  dati = db.execute("""SELECT * FROM rezultati
+                  """)
+  rezultats = dati.fetchall()
+  print(rezultats)
+
+sg.theme('DarkAmber')   
+layout = [  [sg.Text('Spēle: Akmens, Šķēres, Papīrīts')],
+            [sg.Text('Izvēlies darbību')],
+            [sg.Button('Akmens'), sg.Button('Šķēres'),sg.Button('Papīrs')],
+            [sg.Text('Pretinieka izvēle: '),sg.Text('', key='-IZVELE-')],
+            [sg.Text('Rezultāts: '),sg.Text('', key='-REZ-')],
+            [sg.Text('Ievadi savu vārdu:'), sg.InputText()],
+            [sg.Text('Ievadi savu vecumu:'), sg.InputText()],
+            [sg.Text('Vai vēlies saglabāt rezultātu? '),sg.Button('Saglabāt')],
+            [sg.Cancel()]]
 
 
-start = input('Вы запустили игру "Камень, ножницы, бумага". Хотите поиграть? (Вводите + или -): ')
+tabgrp = [[sg.TabGroup([[sg.tab('Spēle', layout),
+                        sg.Tab('Spēlētāja dati, layout2')]])]]
 
-if start == '+':
-    print('Загрузка...')
-    print("Загрузка завершена! Начинаем!")
-    print("3...2...1...")
-    print('Если захотите закончить вводите "-".')
-    print('Если захотите узнать счёт вводите "с".')
-    user_ball = 0
-    rand_ball = 0
-    while True:
-        user = input("Камень, ножницы или бумага? (Вводите к, н или б): ")
-        list_play = ['к', 'н', 'б']
-        if user in list_play:
-            rand = random.choice(list_play)
-            print(rand)
+window = sg.Window('Spēle', layout)
+while True:             
+    event, values = window.read()
+    if event == "Akmens":
+      izveele = 'A'
+      pretIzvele = pret_izveele()
+      window['-REZ-'].update(rezultats(pretIzvele,izveele))
+    elif event == "Šķēres":
+      izveele = 'S'
+      pretIzvele = pret_izveele()
+      window['-REZ-'].update(rezultats(pretIzvele,izveele))
+    elif event == "Papīrs":
+      izveele = 'P'
+      pretIzvele = pret_izveele()
+      window['-REZ-'].update(rezultats(pretIzvele,izveele))
+    elif event == "Saglabāt":
+      vards = values[0]
+      vecums = values[1]
+      datu_saglabasana(vards,vecums)
+    if event in (sg.WIN_CLOSED, 'Cancel'):
+        break
 
-            if rand == 'к' and user == 'н':
-                rand_ball += 1
-            if rand == 'к' and user == 'б':
-                user_ball += 1
-            if rand == 'н' and user == 'к':
-                user_ball += 1
-            if rand == 'н' and user == 'б':
-                rand_ball += 1
-            if rand == 'б' and user == 'н':
-                user_ball += 1
-            if rand == 'б' and user == 'к':
-                rand_ball += 1
-        elif user == 'с':
-            print('Ваши баллы - ', user_ball, '. Баллы вашего соперника - ', rand_ball, ".")
-        elif user == '-':
-            print('Ваши баллы - ', user_ball, '. Баллы вашего соперника - ', rand_ball, ".")
-            print('Конец игры! Заходите ещё!')
-            break
-        else:
-            print('Вводите к, н или б')
-
-
-if start == '-':
-    print('Жаль... :(')
-else:
-    print('Простите, я вас не понял, если хотите играть перезапустите программу и введите "+". Спасибо!')
+window.close()
